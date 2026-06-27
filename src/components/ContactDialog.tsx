@@ -4,11 +4,33 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { site } from "@/data/site";
 
-const telHref = `tel:${site.phone.replace(/\s+/g, "")}`;
+const initialForm = {
+  nome: "",
+  cognome: "",
+  attivita: "",
+  telefono: "",
+  email: "",
+};
+
+type Form = typeof initialForm;
+
+const fields: {
+  name: keyof Form;
+  label: string;
+  type: string;
+  autoComplete?: string;
+}[] = [
+  { name: "nome", label: "Nome", type: "text", autoComplete: "given-name" },
+  { name: "cognome", label: "Cognome", type: "text", autoComplete: "family-name" },
+  { name: "attivita", label: "Tipo di attività", type: "text" },
+  { name: "telefono", label: "Numero di telefono", type: "tel", autoComplete: "tel" },
+  { name: "email", label: "Email", type: "email", autoComplete: "email" },
+];
 
 export default function ContactDialog() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [form, setForm] = useState<Form>(initialForm);
 
   useEffect(() => setMounted(true), []);
 
@@ -36,6 +58,25 @@ export default function ContactDialog() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const subject = `Nuova richiesta da ${form.nome} ${form.cognome}`.trim();
+    const body = [
+      `Nome: ${form.nome} ${form.cognome}`,
+      `Tipo di attività: ${form.attivita}`,
+      `Telefono: ${form.telefono}`,
+      `Email: ${form.email}`,
+    ].join("\n");
+
+    window.location.href = `mailto:${site.email}?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+  };
+
+  const update = (name: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [name]: e.target.value }));
 
   return (
     <>
@@ -88,34 +129,33 @@ export default function ContactDialog() {
                 Contatti
               </p>
               <p className="mt-3 font-display text-3xl font-light tracking-tight">
-                {site.name}
+                Parlami del tuo progetto
               </p>
 
-              <div className="mt-8 flex flex-col gap-5">
-                <a
-                  href={telHref}
-                  className="group block border-t border-line/10 pt-5"
-                >
-                  <span className="block text-xs uppercase tracking-[0.15em] text-muted">
-                    Telefono
-                  </span>
-                  <span className="mt-1 block text-lg transition-colors group-hover:text-accent">
-                    {site.phone}
-                  </span>
-                </a>
+              <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+                {fields.map((field) => (
+                  <label key={field.name} className="block">
+                    <span className="block text-xs uppercase tracking-[0.15em] text-muted">
+                      {field.label}
+                    </span>
+                    <input
+                      type={field.type}
+                      required
+                      autoComplete={field.autoComplete}
+                      value={form[field.name]}
+                      onChange={update(field.name)}
+                      className="mt-2 w-full border-b border-line/15 bg-transparent pb-2 text-lg outline-none transition-colors placeholder:text-muted/50 focus:border-accent"
+                    />
+                  </label>
+                ))}
 
-                <a
-                  href={`mailto:${site.email}`}
-                  className="group block border-t border-line/10 pt-5"
+                <button
+                  type="submit"
+                  className="mt-3 rounded-full bg-fg px-7 py-3 text-sm font-medium text-bg transition-opacity hover:opacity-90"
                 >
-                  <span className="block text-xs uppercase tracking-[0.15em] text-muted">
-                    Email
-                  </span>
-                  <span className="mt-1 block break-words text-lg transition-colors group-hover:text-accent">
-                    {site.email}
-                  </span>
-                </a>
-              </div>
+                  Invia richiesta
+                </button>
+              </form>
             </div>
           </div>,
           document.body,

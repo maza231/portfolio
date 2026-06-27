@@ -10,19 +10,12 @@ export default function Footer() {
             {site.name}
           </p>
 
-          <div className="flex items-center gap-6">
-            {site.socials.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted transition-colors hover:text-fg"
-              >
-                {social.label}
-              </a>
-            ))}
-          </div>
+          <a
+            href={`mailto:${site.email}`}
+            className="text-sm text-muted transition-colors hover:text-fg"
+          >
+            {site.email}
+          </a>
 
           <p className="text-sm text-muted">
             © {new Date().getFullYear()} · Tutti i diritti riservati
