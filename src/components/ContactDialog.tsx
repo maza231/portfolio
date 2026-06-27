@@ -13,6 +13,7 @@ const initialForm = {
 };
 
 type Form = typeof initialForm;
+type Status = "idle" | "sending" | "success" | "error";
 
 const fields: {
   name: keyof Form;
@@ -31,6 +32,7 @@ export default function ContactDialog() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<Form>(initialForm);
+  const [status, setStatus] = useState<Status>("idle");
 
   useEffect(() => setMounted(true), []);
 
@@ -59,20 +61,44 @@ export default function ContactDialog() {
     };
   }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Reset the form a moment after the dialog is closed.
+  useEffect(() => {
+    if (open) return;
+    const t = setTimeout(() => {
+      setForm(initialForm);
+      setStatus("idle");
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStatus("sending");
 
-    const subject = `Nuova richiesta da ${form.nome} ${form.cognome}`.trim();
-    const body = [
-      `Nome: ${form.nome} ${form.cognome}`,
-      `Tipo di attività: ${form.attivita}`,
-      `Telefono: ${form.telefono}`,
-      `Email: ${form.email}`,
-    ].join("\n");
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: site.web3formsKey,
+          subject: `Nuova richiesta da ${form.nome} ${form.cognome}`.trim(),
+          from_name: `${form.nome} ${form.cognome}`.trim(),
+          Nome: form.nome,
+          Cognome: form.cognome,
+          "Tipo di attività": form.attivita,
+          Telefono: form.telefono,
+          Email: form.email,
+        }),
+      });
 
-    window.location.href = `mailto:${site.email}?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
+      const data = await res.json();
+      setStatus(data.success ? "success" : "error");
+    } catch {
+      setStatus("error");
+    }
   };
 
   const update = (name: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -128,34 +154,62 @@ export default function ContactDialog() {
               <p className="text-sm uppercase tracking-[0.2em] text-muted">
                 Contatti
               </p>
-              <p className="mt-3 font-display text-3xl font-light tracking-tight">
-                Parlami del tuo progetto
-              </p>
 
-              <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
-                {fields.map((field) => (
-                  <label key={field.name} className="block">
-                    <span className="block text-xs uppercase tracking-[0.15em] text-muted">
-                      {field.label}
-                    </span>
-                    <input
-                      type={field.type}
-                      required
-                      autoComplete={field.autoComplete}
-                      value={form[field.name]}
-                      onChange={update(field.name)}
-                      className="mt-2 w-full border-b border-line/15 bg-transparent pb-2 text-lg outline-none transition-colors placeholder:text-muted/50 focus:border-accent"
-                    />
-                  </label>
-                ))}
+              {status === "success" ? (
+                <div className="mt-3">
+                  <p className="font-display text-3xl font-light tracking-tight">
+                    Richiesta inviata
+                  </p>
+                  <p className="mt-4 text-muted">
+                    Grazie {form.nome}, ti risponderò il prima possibile.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="mt-8 rounded-full bg-fg px-7 py-3 text-sm font-medium text-bg transition-opacity hover:opacity-90"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="mt-3 font-display text-3xl font-light tracking-tight">
+                    Parlami del tuo progetto
+                  </p>
 
-                <button
-                  type="submit"
-                  className="mt-3 rounded-full bg-fg px-7 py-3 text-sm font-medium text-bg transition-opacity hover:opacity-90"
-                >
-                  Invia richiesta
-                </button>
-              </form>
+                  <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+                    {fields.map((field) => (
+                      <label key={field.name} className="block">
+                        <span className="block text-xs uppercase tracking-[0.15em] text-muted">
+                          {field.label}
+                        </span>
+                        <input
+                          type={field.type}
+                          required
+                          autoComplete={field.autoComplete}
+                          value={form[field.name]}
+                          onChange={update(field.name)}
+                          className="mt-2 w-full border-b border-line/15 bg-transparent pb-2 text-lg outline-none transition-colors placeholder:text-muted/50 focus:border-accent"
+                        />
+                      </label>
+                    ))}
+
+                    {status === "error" && (
+                      <p className="text-sm text-accent">
+                        Qualcosa è andato storto. Riprova o scrivimi a {site.email}.
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={status === "sending"}
+                      className="mt-3 rounded-full bg-fg px-7 py-3 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      {status === "sending" ? "Invio in corso…" : "Invia richiesta"}
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
           </div>,
           document.body,
