@@ -31,4 +31,11 @@ export const projects: Project[] = [
     href: "https://demopizzeria.vercel.app/",
     year: "2026",
   },
+  {
+    title: "Centro Estetica M",
+    category: "Estetista",
+    description: "Sito semplice, servizi esposti e prenotazione rapida ",
+    href: "https://demo-estetica-nine.vercel.app/",
+    year: "2026",
+  },
 ];
